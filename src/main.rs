@@ -15,6 +15,7 @@ extern crate rand;
 extern crate btree_rewrite;
 
 mod multiply_shift;
+mod sip_opt;
 
 use std::process::{Stdio, Command};
 use std::io::Result as IoResult;
@@ -128,9 +129,9 @@ macro_rules! hash_benches {
         use blake2_rfc::blake2s::Blake2s;
         use _fnv::FnvHasher as Fnv;
         use farmhash::FarmHasher as Farm;
-        use std::hash::Hasher;
-        use std::collections::hash_state::{DefaultState, HashState};
+        use std::hash::{Hasher, BuildHasher, BuildHasherDefault};
         use multiply_shift::HornerHasher;
+        use sip_opt::SipHasher as SipOpt;
 
         use std::collections::HashMap;
         use test::{black_box, Bencher};
@@ -140,13 +141,13 @@ macro_rules! hash_benches {
         fn hasher_bench<H>(b: B, len: usize)
         where H: Hasher + Default
         {
-            let hash_state = DefaultState::<H>::default();
+            let hash_state = BuildHasherDefault::<H>::default();
             let bytes: Vec<u8> = (0..100).cycle().take(len).collect();
             let bytes = black_box(bytes);
 
             b.bytes = bytes.len() as u64;
             b.iter(|| {
-                let mut hasher = hash_state.hasher();
+                let mut hasher = hash_state.build_hasher();
                 hasher.write(&bytes);
                 hasher.finish()
             });
@@ -163,9 +164,9 @@ macro_rules! hash_benches {
             b.bytes = (len * num_strings) as u64;
             b.iter(|| {
                 // don't reserve space to be fair to BTree
-                let mut map = HashMap::with_hash_state(DefaultState::<H>::default());
+                let mut map = HashMap::with_hasher(BuildHasherDefault::<H>::default());
                 for chunk in data.chunks(len) {
-                    *map.entry(chunk).or_insert(0) += 1;
+                    *map.entry(chunk).or_insert(0usize) += 1;
                 }
                 map
             });
@@ -183,15 +184,15 @@ macro_rules! hash_benches {
             b.bytes = (len * num_strings) as u64;
             b.iter(|| {
                 // don't reserve space to be fair to BTree
-                let mut map = HashMap::with_hash_state(DefaultState::<H>::default());
+                let mut map = HashMap::with_hasher(BuildHasherDefault::<H>::default());
                 for chunk in data.chunks(len) {
-                    *map.entry(chunk).or_insert(0) += 1;
+                    *map.entry(chunk).or_insert(0usize) += 1;
                 }
                 map
             });
         }
 
-        #[bench] fn bytes_000000001(b: B) { hasher_bench::<$Impl>(b, 1) }
+        // #[bench] fn bytes_000000001(b: B) { hasher_bench::<$Impl>(b, 1) }
         #[bench] fn bytes_000000002(b: B) { hasher_bench::<$Impl>(b, 2) }
         #[bench] fn bytes_000000004(b: B) { hasher_bench::<$Impl>(b, 4) }
         #[bench] fn bytes_000000008(b: B) { hasher_bench::<$Impl>(b, 8) }
@@ -200,11 +201,11 @@ macro_rules! hash_benches {
         #[bench] fn bytes_000000064(b: B) { hasher_bench::<$Impl>(b, 64) }
         #[bench] fn bytes_000000128(b: B) { hasher_bench::<$Impl>(b, 128) }
         #[bench] fn bytes_000000256(b: B) { hasher_bench::<$Impl>(b, 256) }
-        #[bench] fn bytes_000000512(b: B) { hasher_bench::<$Impl>(b, 512) }
-        #[bench] fn bytes_000001024(b: B) { hasher_bench::<$Impl>(b, 1024) }
-        #[bench] fn bytes_000002048(b: B) { hasher_bench::<$Impl>(b, 2048) }
+        // #[bench] fn bytes_000000512(b: B) { hasher_bench::<$Impl>(b, 512) }
+        // #[bench] fn bytes_000001024(b: B) { hasher_bench::<$Impl>(b, 1024) }
+        // #[bench] fn bytes_000002048(b: B) { hasher_bench::<$Impl>(b, 2048) }
 
-        #[bench] fn mapcountsparse_000000001(b: B) { map_bench_sparse::<$Impl>(b, 1) }
+        // #[bench] fn mapcountsparse_000000001(b: B) { map_bench_sparse::<$Impl>(b, 1) }
         #[bench] fn mapcountsparse_000000002(b: B) { map_bench_sparse::<$Impl>(b, 2) }
         #[bench] fn mapcountsparse_000000004(b: B) { map_bench_sparse::<$Impl>(b, 4) }
         #[bench] fn mapcountsparse_000000008(b: B) { map_bench_sparse::<$Impl>(b, 8) }
@@ -213,11 +214,11 @@ macro_rules! hash_benches {
         #[bench] fn mapcountsparse_000000064(b: B) { map_bench_sparse::<$Impl>(b, 64) }
         #[bench] fn mapcountsparse_000000128(b: B) { map_bench_sparse::<$Impl>(b, 128) }
         #[bench] fn mapcountsparse_000000256(b: B) { map_bench_sparse::<$Impl>(b, 256) }
-        #[bench] fn mapcountsparse_000000512(b: B) { map_bench_sparse::<$Impl>(b, 512) }
-        #[bench] fn mapcountsparse_000001024(b: B) { map_bench_sparse::<$Impl>(b, 1024) }
-        #[bench] fn mapcountsparse_000002048(b: B) { map_bench_sparse::<$Impl>(b, 2048) }
+        // #[bench] fn mapcountsparse_000000512(b: B) { map_bench_sparse::<$Impl>(b, 512) }
+        // #[bench] fn mapcountsparse_000001024(b: B) { map_bench_sparse::<$Impl>(b, 1024) }
+        // #[bench] fn mapcountsparse_000002048(b: B) { map_bench_sparse::<$Impl>(b, 2048) }
 
-        #[bench] fn mapcountdense_000000001(b: B) { map_bench_dense::<$Impl>(b, 1) }
+        // #[bench] fn mapcountdense_000000001(b: B) { map_bench_dense::<$Impl>(b, 1) }
         #[bench] fn mapcountdense_000000002(b: B) { map_bench_dense::<$Impl>(b, 2) }
         #[bench] fn mapcountdense_000000004(b: B) { map_bench_dense::<$Impl>(b, 4) }
         #[bench] fn mapcountdense_000000008(b: B) { map_bench_dense::<$Impl>(b, 8) }
@@ -226,16 +227,15 @@ macro_rules! hash_benches {
         #[bench] fn mapcountdense_000000064(b: B) { map_bench_dense::<$Impl>(b, 64) }
         #[bench] fn mapcountdense_000000128(b: B) { map_bench_dense::<$Impl>(b, 128) }
         #[bench] fn mapcountdense_000000256(b: B) { map_bench_dense::<$Impl>(b, 256) }
-        #[bench] fn mapcountdense_000000512(b: B) { map_bench_dense::<$Impl>(b, 512) }
-        #[bench] fn mapcountdense_000001024(b: B) { map_bench_dense::<$Impl>(b, 1024) }
-        #[bench] fn mapcountdense_000002048(b: B) { map_bench_dense::<$Impl>(b, 2048) }
+        // #[bench] fn mapcountdense_000000512(b: B) { map_bench_dense::<$Impl>(b, 512) }
+        // #[bench] fn mapcountdense_000001024(b: B) { map_bench_dense::<$Impl>(b, 1024) }
+        // #[bench] fn mapcountdense_000002048(b: B) { map_bench_dense::<$Impl>(b, 2048) }
    }
 }
 
 macro_rules! tree_benches {
     ($Impl: ty) => {
         use std::collections::BTreeMap as StdBTree;
-        use btree_rewrite::map::BTreeMap as NewBTree;
 
         use test::{black_box, Bencher};
         pub type B<'a> = &'a mut Bencher;
@@ -275,7 +275,7 @@ macro_rules! tree_benches {
         }
 
 
-        #[bench] fn mapcountsparse_000000001(b: B) { map_bench_sparse(b, 1) }
+        // #[bench] fn mapcountsparse_000000001(b: B) { map_bench_sparse(b, 1) }
         #[bench] fn mapcountsparse_000000002(b: B) { map_bench_sparse(b, 2) }
         #[bench] fn mapcountsparse_000000004(b: B) { map_bench_sparse(b, 4) }
         #[bench] fn mapcountsparse_000000008(b: B) { map_bench_sparse(b, 8) }
@@ -284,11 +284,11 @@ macro_rules! tree_benches {
         #[bench] fn mapcountsparse_000000064(b: B) { map_bench_sparse(b, 64) }
         #[bench] fn mapcountsparse_000000128(b: B) { map_bench_sparse(b, 128) }
         #[bench] fn mapcountsparse_000000256(b: B) { map_bench_sparse(b, 256) }
-        #[bench] fn mapcountsparse_000000512(b: B) { map_bench_sparse(b, 512) }
-        #[bench] fn mapcountsparse_000001024(b: B) { map_bench_sparse(b, 1024) }
-        #[bench] fn mapcountsparse_000002048(b: B) { map_bench_sparse(b, 2048) }
+        // #[bench] fn mapcountsparse_000000512(b: B) { map_bench_sparse(b, 512) }
+        // #[bench] fn mapcountsparse_000001024(b: B) { map_bench_sparse(b, 1024) }
+        // #[bench] fn mapcountsparse_000002048(b: B) { map_bench_sparse(b, 2048) }
 
-        #[bench] fn mapcountdense_000000001(b: B) { map_bench_dense(b, 1) }
+        // #[bench] fn mapcountdense_000000001(b: B) { map_bench_dense(b, 1) }
         #[bench] fn mapcountdense_000000002(b: B) { map_bench_dense(b, 2) }
         #[bench] fn mapcountdense_000000004(b: B) { map_bench_dense(b, 4) }
         #[bench] fn mapcountdense_000000008(b: B) { map_bench_dense(b, 8) }
@@ -297,9 +297,9 @@ macro_rules! tree_benches {
         #[bench] fn mapcountdense_000000064(b: B) { map_bench_dense(b, 64) }
         #[bench] fn mapcountdense_000000128(b: B) { map_bench_dense(b, 128) }
         #[bench] fn mapcountdense_000000256(b: B) { map_bench_dense(b, 256) }
-        #[bench] fn mapcountdense_000000512(b: B) { map_bench_dense(b, 512) }
-        #[bench] fn mapcountdense_000001024(b: B) { map_bench_dense(b, 1024) }
-        #[bench] fn mapcountdense_000002048(b: B) { map_bench_dense(b, 2048) }
+        // #[bench] fn mapcountdense_000000512(b: B) { map_bench_dense(b, 512) }
+        // #[bench] fn mapcountdense_000001024(b: B) { map_bench_dense(b, 1024) }
+        // #[bench] fn mapcountdense_000002048(b: B) { map_bench_dense(b, 2048) }
     }
 }
 
@@ -308,6 +308,7 @@ macro_rules! tree_benches {
 #[cfg(test)] mod farm { hash_benches!{Farm} }
 #[cfg(test)] mod fnv { hash_benches!{Fnv} }
 #[cfg(test)] mod horner { hash_benches!{HornerHasher} }
+#[cfg(test)] mod sip_opt_b { hash_benches!{SipOpt} }
 
 // one day?
 
@@ -316,7 +317,5 @@ macro_rules! tree_benches {
 // #[cfg(test)] mod murmur { hash_benches!{MurMur}}
 
 
-#[cfg(test)] mod btree { tree_benches!{StdBTree<&[u8], i32>} }
-#[cfg(test)] mod btreenew { tree_benches!{NewBTree<&[u8], i32>} }
-
-
+// #[cfg(test)] mod btree { tree_benches!{StdBTree<&[u8], usize>} }
+// #[cfg(test)] mod btreenew { tree_benches!{NewBTree<&[u8], i32>} }
