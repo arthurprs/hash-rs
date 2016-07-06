@@ -1,5 +1,5 @@
 #![feature(asm)]
-#![feature(test)]
+#![feature(test)]#![feature(sip_hash_13)]
 #![cfg_attr(test, feature(hashmap_hasher))]
 #![allow(unused_imports, dead_code)]
 
@@ -29,6 +29,19 @@ use std::collections::HashMap;
 #[cfg(not(test))]
 fn main() {
     do_it().unwrap();
+}
+
+#[test]
+fn test_diff() {
+    use std::hash::Hasher;
+    use std::hash::Hash;
+    let mut hasher1 = sip_opt::SipHasher::default();
+    let a = (b"12", b"34");
+    a.hash(&mut hasher1);
+    let mut hasher2 = sip_opt::SipHasher::default();
+    let b = (b"123", b"4");
+    b.hash(&mut hasher2);
+    assert!(hasher1.finish() != hasher2.finish());
 }
 
 struct DataPoint {
@@ -121,7 +134,7 @@ fn do_it() -> IoResult<()> {
 
 macro_rules! hash_benches {
     ($Impl: ty) => {
-        use std::hash::SipHasher as Sip;
+        use std::hash::SipHasher13 as Sip;
         use twox_hash::XxHash as Xx;
         // use murmurhash64 as murmur2;
         // use murmurhash3::Murmur3State as Murmur3State;
@@ -304,10 +317,10 @@ macro_rules! tree_benches {
 }
 
 #[cfg(test)] mod sip { hash_benches!{Sip} }
-#[cfg(test)] mod xx { hash_benches!{Xx} }
-#[cfg(test)] mod farm { hash_benches!{Farm} }
-#[cfg(test)] mod fnv { hash_benches!{Fnv} }
-#[cfg(test)] mod horner { hash_benches!{HornerHasher} }
+// #[cfg(test)] mod xx { hash_benches!{Xx} }
+// #[cfg(test)] mod farm { hash_benches!{Farm} }
+// #[cfg(test)] mod fnv { hash_benches!{Fnv} }
+// #[cfg(test)] mod horner { hash_benches!{HornerHasher} }
 #[cfg(test)] mod sip_opt_b { hash_benches!{SipOpt} }
 
 // one day?

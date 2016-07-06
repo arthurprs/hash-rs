@@ -43,6 +43,7 @@ pub struct SipHasher {
     v3: u64,
     tail: u64, // unprocessed bytes le
     ntail: usize, // how many bytes in tail are valid
+    delimiters: usize,
 }
 
 // sadly, these macro definitions can't appear later,
@@ -121,6 +122,7 @@ impl SipHasher {
             v3: 0,
             tail: 0,
             ntail: 0,
+            delimiters: 0,
         };
         state.reset();
         state
@@ -139,7 +141,20 @@ impl SipHasher {
 
 impl Hasher for SipHasher {
     #[inline]
+    fn write_usize(&mut self, i: usize) {
+        self.delimiters += 1;
+        if self.delimiters > 1 {
+            use std;
+            let bytes = unsafe {
+                std::slice::from_raw_parts(&i as *const usize as *const u8, std::mem::size_of::<usize>())
+            };
+            self.write(bytes);
+        }
+    }
+
+    #[inline]
     fn write(&mut self, msg: &[u8]) {
+        // println!("write {:?}", msg);
         let length = msg.len();
         self.length += length;
 
@@ -220,6 +235,7 @@ impl Clone for SipHasher {
             v3: self.v3,
             tail: self.tail,
             ntail: self.ntail,
+            delimiters: 0,
         }
     }
 }
