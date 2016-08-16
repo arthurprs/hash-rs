@@ -134,7 +134,7 @@ fn do_it() -> IoResult<()> {
 
 macro_rules! hash_benches {
     ($Impl: ty) => {
-        use std::hash::SipHasher13 as Sip;
+        use std::hash::{SipHasher, SipHasher13};
         use twox_hash::XxHash as Xx;
         // use murmurhash64 as murmur2;
         // use murmurhash3::Murmur3State as Murmur3State;
@@ -316,12 +316,13 @@ macro_rules! tree_benches {
     }
 }
 
-#[cfg(test)] mod sip { hash_benches!{Sip} }
+#[cfg(test)] mod sip24 { hash_benches!{SipHasher} }
+#[cfg(test)] mod sip13 { hash_benches!{SipHasher13} }
 // #[cfg(test)] mod xx { hash_benches!{Xx} }
 // #[cfg(test)] mod farm { hash_benches!{Farm} }
 // #[cfg(test)] mod fnv { hash_benches!{Fnv} }
 // #[cfg(test)] mod horner { hash_benches!{HornerHasher} }
-#[cfg(test)] mod sip_opt_b { hash_benches!{SipOpt} }
+#[cfg(test)] mod sip13opt { hash_benches!{SipOpt} }
 
 // one day?
 
